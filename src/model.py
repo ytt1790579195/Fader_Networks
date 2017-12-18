@@ -76,61 +76,99 @@ def build_layers(img_sz, img_fm, init_fm, max_fm, n_layers, n_attr, n_skip,
 
 class AutoEncoder(nn.Module):
 
-    def __init__(self, params):
+    def __init__(self, y_axes_num):
+        self.y_num = y_axes_num
+
         super(AutoEncoder, self).__init__()
 
-        self.img_sz = params.img_sz
-        self.img_fm = params.img_fm
-        self.instance_norm = params.instance_norm
-        self.init_fm = params.init_fm
-        self.max_fm = params.max_fm
-        self.n_layers = params.n_layers
-        self.n_skip = params.n_skip
-        self.deconv_method = params.deconv_method
-        self.dropout = params.dec_dropout
-        self.attr = params.attr
-        self.n_attr = params.n_attr
+        self.conv1 = nn.Sequential(
+            nn.Conv2d(3, 32, 4, stride=2, padding=1),
+            nn.LeakyReLU()
+        )
+        self.conv2 = nn.Sequential(
+            nn.Conv2d(32, 64, 4, stride=2, padding=1),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU()
+        )
+        self.conv3 = nn.Sequential(
+            nn.Conv2d(64, 128, 4, stride=2, padding=1),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU()
+        )
+        self.conv4 = nn.Sequential(
+            nn.Conv2d(128, 256, 4, stride=2, padding=1),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU()
+        )
+        self.conv5 = nn.Sequential(
+            nn.Conv2d(256, 512, 4, stride=2, padding=1),
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU()
+        )
+        self.conv6 = nn.Sequential(
+            nn.Conv2d(512, 512, 4, stride=2, padding=1),
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU()
+        )
 
-        enc_layers, dec_layers = build_layers(self.img_sz, self.img_fm, self.init_fm,
-                                              self.max_fm, self.n_layers, self.n_attr,
-                                              self.n_skip, self.deconv_method,
-                                              self.instance_norm, 0, self.dropout)
-        self.enc_layers = nn.ModuleList(enc_layers)
-        self.dec_layers = nn.ModuleList(dec_layers)
+        self.deconv1 = nn.Sequential(
+            nn.ConvTranspose2d(512 + self.y_num, 512 + self.y_num, 4, stride=2, padding=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU()
+        )
+        self.deconv2 = nn.Sequential(
+            nn.ConvTranspose2d(512 + self.y_num, 256 + self.y_num, 4, stride=2, padding=1),
+            nn.BatchNorm2d(256),
+            nn.ReLU()
+        )
+        self.deconv3 = nn.Sequential(
+            nn.ConvTranspose2d(256 + self.y_num, 128 + self.y_num, 4, stride=2, padding=1),
+            nn.BatchNorm2d(128),
+            nn.ReLU()
+        )
+        self.deconv4 = nn.Sequential(
+            nn.ConvTranspose2d(128 + self.y_num, 64 + self.y_num, 4, stride=2, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU()
+        )
+        self.deconv5 = nn.Sequential(
+            nn.ConvTranspose2d(64 + self.y_num, 32 + self.y_num, 4, stride=2, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU()
+        )
+        self.deconv6 = nn.Sequential(
+            nn.ConvTranspose2d(32 + self.y_num, 3 ,4, stride=2, padding=1),
+            nn.Tanh()
+        )
 
-    def encode(self, x):
-        assert x.size()[1:] == (self.img_fm, self.img_sz, self.img_sz)
+    def encode(self, X):
+        x = self.conv1(X)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+        x = self.conv5(x)
+        x = self.conv6(x)
+        return x
 
-        enc_outputs = [x]
-        for layer in self.enc_layers:
-            enc_outputs.append(layer(enc_outputs[-1]))
-
-        assert len(enc_outputs) == self.n_layers + 1
-        return enc_outputs
-
-    def decode(self, enc_outputs, y):
-        bs = enc_outputs[0].size(0)
-        assert len(enc_outputs) == self.n_layers + 1
-        assert y.size() == (bs, self.n_attr)
-
-        dec_outputs = [enc_outputs[-1]]
+    def decode(self, z, y):
+        bs = z[0].size(0)
         y = y.unsqueeze(2).unsqueeze(3)
-        for i, layer in enumerate(self.dec_layers):
-            size = dec_outputs[-1].size(2)
-            # attributes
-            input = [dec_outputs[-1], y.expand(bs, self.n_attr, size, size)]
-            # skip connection
-            if 0 < i <= self.n_skip:
-                input.append(enc_outputs[-1 - i])
-            input = torch.cat(input, 1)
-            dec_outputs.append(layer(input))
-
-        assert len(dec_outputs) == self.n_layers + 1
-        assert dec_outputs[-1].size() == (bs, self.img_fm, self.img_sz, self.img_sz)
+        x = [z, y.expand(bs, self.y_num, 2, 2)]
+        x = self.deconv1(x)
+        x = [x, y.expand(bs, self.y_num, 4, 4)]
+        x = self.deconv2(x)
+        x = [x, y.expand(bs, self.y_num, 8, 8)]
+        x = self.deconv3(x)
+        x = [x, y.expand(bs, self.y_num, 16, 16)]
+        x = self.deconv4(x)
+        x = [x, y.expand(bs, self.y_num, 32, 32)]
+        x = self.deconv5(x)
+        x = [x, y.expand(bs, self.y_num, 64, 64)]
+        x = self.deconv6(x)
         return dec_outputs
 
-    def forward(self, x, y):
-        enc_outputs = self.encode(x)
+    def forward(self, X, y):
+        enc_outputs = self.encode(X)
         dec_outputs = self.decode(enc_outputs, y)
         return enc_outputs, dec_outputs
 
