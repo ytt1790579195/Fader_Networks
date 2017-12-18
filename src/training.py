@@ -122,14 +122,14 @@ class Trainer(object):
         y_fake = Variable(torch.FloatTensor(real_preds.size())
                                .fill_(params.smooth_label).cuda())
         # loss / optimize
-        loss = F.binary_cross_entropy(real_preds, 1 - y_fake)
-        loss += F.binary_cross_entropy(fake_preds, y_fake)
+        loss = F.binary_cross_entropy(real_preds, 1 - y_fake) #让真的数据ptc_dis的结果更接近1-y_fake
+        loss += F.binary_cross_entropy(fake_preds, y_fake) #让假的数据ptc_dis的结果更接近y_fake
         self.stats['ptc_dis_costs'].append(loss.data[0])
         self.ptc_dis_optimizer.zero_grad()
         loss.backward()
         if params.clip_grad_norm:
             clip_grad_norm(self.ptc_dis.parameters(), params.clip_grad_norm)
-        self.ptc_dis_optimizer.step()
+        self.ptc_dis_optimizer.step() #优化的参数是patch_discriminator的参数
 
     def clf_dis_step(self):
         """
