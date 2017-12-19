@@ -114,7 +114,7 @@ train_data = DataSampler(data[0], attributes[0], params)
 valid_data = DataSampler(data[1], attributes[1], params)
 
 # build the model
-ae = AutoEncoder(params).cuda()
+ae = AutoEncoder(params.n_attr).cuda()
 lat_dis = LatentDiscriminator(params).cuda() if params.n_lat_dis else None
 ptc_dis = PatchDiscriminator(params).cuda() if params.n_ptc_dis else None
 clf_dis = Classifier(params).cuda() if params.n_clf_dis else None

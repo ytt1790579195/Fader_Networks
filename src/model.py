@@ -151,26 +151,32 @@ class AutoEncoder(nn.Module):
         return x
 
     def decode(self, z, y):
-        bs = z[0].size(0)
+        bs = z.size(0)
         y = y.unsqueeze(2).unsqueeze(3)
         x = [z, y.expand(bs, self.y_dim, 4, 4)]
+        x = torch.cat(x, 1)
         x = self.deconv1(x)
         x = [x, y.expand(bs, self.y_dim, 8, 8)]
+        x = torch.cat(x, 1)
         x = self.deconv2(x)
         x = [x, y.expand(bs, self.y_dim, 16, 16)]
+        x = torch.cat(x, 1)
         x = self.deconv3(x)
         x = [x, y.expand(bs, self.y_dim, 32, 32)]
+        x = torch.cat(x, 1)
         x = self.deconv4(x)
         x = [x, y.expand(bs, self.y_dim, 64, 64)]
+        x = torch.cat(x, 1)
         x = self.deconv5(x)
         x = [x, y.expand(bs, self.y_dim, 128, 128)]
+        x = torch.cat(x, 1)
         x = self.deconv6(x)
         return x
 
     def forward(self, X, y):
-        enc_outputs = self.encode(X)
-        dec_outputs = self.decode(enc_outputs, y)
-        return enc_outputs, dec_outputs
+        enc_output = self.encode(X)
+        dec_output = self.decode(enc_output, y)
+        return enc_output, dec_output
 
 
 class LatentDiscriminator(nn.Module):
