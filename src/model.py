@@ -176,7 +176,8 @@ class PatchDiscriminator(nn.Module):
         x = self.conv3(x)
         x = self.conv4(x)
         x = self.conv5(x)
-        x = x.mean(x, dim=[1,2,3])
+        x = x.view(-1, 32*32)
+        x = x.mean(x, dim=1)
         return x
 
 
