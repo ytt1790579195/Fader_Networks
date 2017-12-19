@@ -117,7 +117,7 @@ valid_data = DataSampler(data[1], attributes[1], params)
 ae = AutoEncoder(params.n_attr).cuda()
 lat_dis = LatentDiscriminator(params.n_attr).cuda() if params.n_lat_dis else None
 ptc_dis = PatchDiscriminator().cuda() if params.n_ptc_dis else None
-clf_dis = Classifier(params).cuda() if params.n_clf_dis else None
+clf_dis = Classifier(params.n_attr).cuda() if params.n_clf_dis else None
 eval_clf = torch.load(params.eval_clf).cuda().eval()
 
 # trainer / evaluator
