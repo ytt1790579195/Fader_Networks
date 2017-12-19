@@ -76,68 +76,68 @@ def build_layers(img_sz, img_fm, init_fm, max_fm, n_layers, n_attr, n_skip,
 
 class AutoEncoder(nn.Module):
 
-    def __init__(self, y_axes_num):
-        self.y_num = y_axes_num
+    def __init__(self, y_dim): #这里的y是[0,1]或是[1,0]标签的维数 2倍原来
+        self.y_dim = y_dim
 
         super(AutoEncoder, self).__init__()
 
-        self.conv1 = nn.Sequential(
+        self.conv1 = nn.Sequential( #[BS,256,256,3]->[BS,128,128,32]
             nn.Conv2d(3, 32, 4, stride=2, padding=1),
             nn.LeakyReLU()
         )
-        self.conv2 = nn.Sequential(
+        self.conv2 = nn.Sequential( #[BS,128,128,32]->[BS,64,64,64]
             nn.Conv2d(32, 64, 4, stride=2, padding=1),
             nn.BatchNorm2d(64),
             nn.LeakyReLU()
         )
-        self.conv3 = nn.Sequential(
+        self.conv3 = nn.Sequential( #[BS,64,64,64]->[BS,32,32,128]
             nn.Conv2d(64, 128, 4, stride=2, padding=1),
             nn.BatchNorm2d(128),
             nn.LeakyReLU()
         )
-        self.conv4 = nn.Sequential(
+        self.conv4 = nn.Sequential( #[BS,32,32,128]->[BS,16,16,256]
             nn.Conv2d(128, 256, 4, stride=2, padding=1),
             nn.BatchNorm2d(256),
             nn.LeakyReLU()
         )
-        self.conv5 = nn.Sequential(
+        self.conv5 = nn.Sequential( #[BS,16,16,256]->[BS,8,8,512]
             nn.Conv2d(256, 512, 4, stride=2, padding=1),
             nn.BatchNorm2d(512),
             nn.LeakyReLU()
         )
-        self.conv6 = nn.Sequential(
+        self.conv6 = nn.Sequential( #[BS,8,8,512]->[BS,4,4,512]
             nn.Conv2d(512, 512, 4, stride=2, padding=1),
             nn.BatchNorm2d(512),
             nn.LeakyReLU()
         )
 
-        self.deconv1 = nn.Sequential(
-            nn.ConvTranspose2d(512 + self.y_num, 512 + self.y_num, 4, stride=2, padding=1),
+        self.deconv1 = nn.Sequential( #[BS,4,4,512+y_num]->[BS,8,8,512]
+            nn.ConvTranspose2d(512 + self.y_dim, 512, 4, stride=2, padding=1),
             nn.BatchNorm2d(512),
             nn.ReLU()
         )
-        self.deconv2 = nn.Sequential(
-            nn.ConvTranspose2d(512 + self.y_num, 256 + self.y_num, 4, stride=2, padding=1),
+        self.deconv2 = nn.Sequential( #[BS,8,8,512+y_num]->[BS,16,16,256]
+            nn.ConvTranspose2d(512 + self.y_dim, 256, 4, stride=2, padding=1),
             nn.BatchNorm2d(256),
             nn.ReLU()
         )
-        self.deconv3 = nn.Sequential(
-            nn.ConvTranspose2d(256 + self.y_num, 128 + self.y_num, 4, stride=2, padding=1),
+        self.deconv3 = nn.Sequential( #[BS,16,16,256+y_num]->[BS,32,32,128]
+            nn.ConvTranspose2d(256 + self.y_dim, 128, 4, stride=2, padding=1),
             nn.BatchNorm2d(128),
             nn.ReLU()
         )
-        self.deconv4 = nn.Sequential(
-            nn.ConvTranspose2d(128 + self.y_num, 64 + self.y_num, 4, stride=2, padding=1),
+        self.deconv4 = nn.Sequential( #[BS,32,32,128+y_num]->[BS,64,64,64]
+            nn.ConvTranspose2d(128 + self.y_dim, 64, 4, stride=2, padding=1),
             nn.BatchNorm2d(64),
             nn.ReLU()
         )
-        self.deconv5 = nn.Sequential(
-            nn.ConvTranspose2d(64 + self.y_num, 32 + self.y_num, 4, stride=2, padding=1),
+        self.deconv5 = nn.Sequential( #[BS,64,64,64+y_num]->[BS,128,128,32]
+            nn.ConvTranspose2d(64 + self.y_dim, 32, 4, stride=2, padding=1),
             nn.BatchNorm2d(32),
             nn.ReLU()
         )
-        self.deconv6 = nn.Sequential(
-            nn.ConvTranspose2d(32 + self.y_num, 3 ,4, stride=2, padding=1),
+        self.deconv6 = nn.Sequential( #[BS,128,128,32+y_num]->[BS,256,256,3]
+            nn.ConvTranspose2d(32 + self.y_dim, 3, 4, stride=2, padding=1),
             nn.Tanh()
         )
 
@@ -153,19 +153,19 @@ class AutoEncoder(nn.Module):
     def decode(self, z, y):
         bs = z[0].size(0)
         y = y.unsqueeze(2).unsqueeze(3)
-        x = [z, y.expand(bs, self.y_num, 2, 2)]
+        x = [z, y.expand(bs, self.y_dim, 4, 4)]
         x = self.deconv1(x)
-        x = [x, y.expand(bs, self.y_num, 4, 4)]
+        x = [x, y.expand(bs, self.y_dim, 8, 8)]
         x = self.deconv2(x)
-        x = [x, y.expand(bs, self.y_num, 8, 8)]
+        x = [x, y.expand(bs, self.y_dim, 16, 16)]
         x = self.deconv3(x)
-        x = [x, y.expand(bs, self.y_num, 16, 16)]
+        x = [x, y.expand(bs, self.y_dim, 32, 32)]
         x = self.deconv4(x)
-        x = [x, y.expand(bs, self.y_num, 32, 32)]
+        x = [x, y.expand(bs, self.y_dim, 64, 64)]
         x = self.deconv5(x)
-        x = [x, y.expand(bs, self.y_num, 64, 64)]
+        x = [x, y.expand(bs, self.y_dim, 128, 128)]
         x = self.deconv6(x)
-        return dec_outputs
+        return x
 
     def forward(self, X, y):
         enc_outputs = self.encode(X)
