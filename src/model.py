@@ -176,6 +176,7 @@ class AutoEncoder(nn.Module):
 class LatentDiscriminator(nn.Module):
 
     def __init__(self, y_dim):
+        self.y_dim = y_dim
         super(LatentDiscriminator, self).__init__()
         self.conv1 = nn.Sequential( #[bs,512,4,4]–>[bs,512,2,2]
             nn.Conv2d(512, 512, 4, stride=2, padding=1),
