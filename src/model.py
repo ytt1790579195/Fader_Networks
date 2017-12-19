@@ -153,23 +153,17 @@ class AutoEncoder(nn.Module):
     def decode(self, z, y):
         bs = z.size(0)
         y = y.unsqueeze(2).unsqueeze(3)
-        x = [z, y.expand(bs, self.y_dim, 4, 4)]
-        x = torch.cat(x, 1)
+        x = torch.cat([z, y.expand(bs, self.y_dim, 4, 4)], 1)
         x = self.deconv1(x)
-        x = [x, y.expand(bs, self.y_dim, 8, 8)]
-        x = torch.cat(x, 1)
+        x = torch.cat([x, y.expand(bs, self.y_dim, 8, 8)], 1)
         x = self.deconv2(x)
-        x = [x, y.expand(bs, self.y_dim, 16, 16)]
-        x = torch.cat(x, 1)
+        x = torch.cat([x, y.expand(bs, self.y_dim, 16, 16)], 1)
         x = self.deconv3(x)
-        x = [x, y.expand(bs, self.y_dim, 32, 32)]
-        x = torch.cat(x, 1)
+        x = torch.cat([x, y.expand(bs, self.y_dim, 32, 32)], 1)
         x = self.deconv4(x)
-        x = [x, y.expand(bs, self.y_dim, 64, 64)]
-        x = torch.cat(x, 1)
+        x = torch.cat([x, y.expand(bs, self.y_dim, 64, 64)], 1)
         x = self.deconv5(x)
-        x = [x, y.expand(bs, self.y_dim, 128, 128)]
-        x = torch.cat(x, 1)
+        x = torch.cat([x, y.expand(bs, self.y_dim, 128, 128)], 1)
         x = self.deconv6(x)
         return x
 
