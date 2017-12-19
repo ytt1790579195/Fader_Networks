@@ -178,23 +178,23 @@ class LatentDiscriminator(nn.Module):
     def __init__(self, y_dim):
         self.y_dim = y_dim
         super(LatentDiscriminator, self).__init__()
-        self.conv1 = nn.Sequential( #[bs,512,4,4]–>[bs,512,2,2]
+        self.conv1 = nn.Sequential( #[BS,512,4,4]–>[BS,512,2,2]
             nn.Conv2d(512, 512, 4, stride=2, padding=1),
             nn.BatchNorm2d(512),
             nn.LeakyReLU(0.2),
             nn.Dropout2d(0.3)
         )
-        self.conv2 = nn.Sequential( #[bs,512,2,2]–>[bs,512,1,1]
+        self.conv2 = nn.Sequential( #[BS,512,2,2]–>[BS,512,1,1]
             nn.Conv2d(512, 512, 4, stride=2, padding=1),
             nn.BatchNorm2d(512),
             nn.LeakyReLU(0.2),
             nn.Dropout2d(0.3)
         )
-        self.fc1 = nn.Sequential( #[bs,512] ->[bs,512]
+        self.fc1 = nn.Sequential( #[BS,512] ->[BS,512]
             nn.Linear(512, 512),
             nn.LeakyReLU(0.2)
         )
-        self.fc2 = nn.Sequential( #[bs,512] ->[bs,y_dim]
+        self.fc2 = nn.Sequential( #[BS,512] ->[BS,y_dim]
             nn.Linear(512, self.y_dim),
         )
 
@@ -208,39 +208,40 @@ class LatentDiscriminator(nn.Module):
 
 
 class PatchDiscriminator(nn.Module):
-    def __init__(self, params):
+    def __init__(self):
         super(PatchDiscriminator, self).__init__()
+        self.conv1 = nn.Sequential( #[BS,3,256,256]->[BS,32,128,128]
+            nn.Conv2d(3, 32, 4, stride=2, padding=1),
+            nn.LeakyReLU(0.2)
+        )
+        self.conv2 = nn.Sequential( #[BS,32,128,128]->[BS,64,64,64]
+            nn.Conv2d(32, 64, 4, stride=2, padding=1),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.2)
+        )
+        self.conv3 = nn.Sequential( #[BS,64,64,64]->[BS,128,32,32]
+            nn.Conv2d(64, 128, 4, stride=2, padding=1),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2)
+        )
+        self.conv4 = nn.Sequential( #[BS,128,32,32]->BS,256,32,32]
+            nn.Conv2d(128, 256, 4, stride=1, padding=1),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2)
+        )
+        self.conv5 = nn.Sequential( #[BS,256,32,32]->[BS,1,32,32]
+            nn.Conv2d(256, 1, 4, stride=1, padding=1),
+            nn.Sigmoid()
+        )
 
-        self.img_sz = params.img_sz
-        self.img_fm = params.img_fm
-        self.init_fm = params.init_fm
-        self.max_fm = params.max_fm
-        self.n_patch_dis_layers = 3
-
-        layers = []
-        layers.append(nn.Conv2d(self.img_fm, self.init_fm, kernel_size=4, stride=2, padding=1))
-        layers.append(nn.LeakyReLU(0.2, True))
-
-        n_in = self.init_fm
-        n_out = min(2 * n_in, self.max_fm)
-
-        for n in range(self.n_patch_dis_layers):
-            stride = 1 if n == self.n_patch_dis_layers - 1 else 2
-            layers.append(nn.Conv2d(n_in, n_out, kernel_size=4, stride=stride, padding=1))
-            layers.append(nn.BatchNorm2d(n_out))
-            layers.append(nn.LeakyReLU(0.2, inplace=True))
-            if n < self.n_patch_dis_layers - 1:
-                n_in = n_out
-                n_out = min(2 * n_out, self.max_fm)
-
-        layers.append(nn.Conv2d(n_out, 1, kernel_size=4, stride=1, padding=1))
-        layers.append(nn.Sigmoid())
-
-        self.layers = nn.Sequential(*layers)
-
-    def forward(self, x):
-        assert x.dim() == 4
-        return self.layers(x).view(x.size(0), -1).mean(1).view(x.size(0))
+    def forward(self, X):
+        x = self.conv1(X)
+        x = self.conv2(x)
+        x = self.conv3(x)
+        x = self.conv4(x)
+        x = self.conv5(x)
+        x = x.mean(x, dim=[1,2,3])
+        return x
 
 
 class Classifier(nn.Module):
