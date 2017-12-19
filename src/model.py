@@ -88,19 +88,19 @@ class AutoEncoder(nn.Module):
         return x
 
     def decode(self, z, y):
-        bs = z.size(0)
+        BS = z.size(0)
         y = y.unsqueeze(2).unsqueeze(3)
-        x = torch.cat([z, y.expand(bs, self.y_dim, 4, 4)], 1)
+        x = torch.cat([z, y.expand(BS, self.y_dim, 4, 4)], 1)
         x = self.deconv1(x)
-        x = torch.cat([x, y.expand(bs, self.y_dim, 8, 8)], 1)
+        x = torch.cat([x, y.expand(BS, self.y_dim, 8, 8)], 1)
         x = self.deconv2(x)
-        x = torch.cat([x, y.expand(bs, self.y_dim, 16, 16)], 1)
+        x = torch.cat([x, y.expand(BS, self.y_dim, 16, 16)], 1)
         x = self.deconv3(x)
-        x = torch.cat([x, y.expand(bs, self.y_dim, 32, 32)], 1)
+        x = torch.cat([x, y.expand(BS, self.y_dim, 32, 32)], 1)
         x = self.deconv4(x)
-        x = torch.cat([x, y.expand(bs, self.y_dim, 64, 64)], 1)
+        x = torch.cat([x, y.expand(BS, self.y_dim, 64, 64)], 1)
         x = self.deconv5(x)
-        x = torch.cat([x, y.expand(bs, self.y_dim, 128, 128)], 1)
+        x = torch.cat([x, y.expand(BS, self.y_dim, 128, 128)], 1)
         x = self.deconv6(x)
         return x
 
@@ -305,14 +305,14 @@ def flip_attributes(attributes, params, attribute_id, new_value=None):
     attributes = attributes.data.clone().cpu()
 
     def flip_attribute(attribute_id, new_value=None):
-        bs = attributes.size(0)
+        BS = attributes.size(0)
         i, j = mappings[attribute_id]
         attributes[:, i:j].zero_()
         if new_value is None:
-            y = torch.LongTensor(bs).random_(j - i)
+            y = torch.LongTensor(BS).random_(j - i)
         else:
             assert new_value in range(j - i)
-            y = torch.LongTensor(bs).fill_(new_value)
+            y = torch.LongTensor(BS).fill_(new_value)
         attributes[:, i:j].scatter_(1, y.unsqueeze(1), 1)
 
     if attribute_id == 'all':
