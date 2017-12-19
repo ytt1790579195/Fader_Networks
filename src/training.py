@@ -93,8 +93,8 @@ class Trainer(object):
         bs = params.batch_size
         # batch / encode / discriminate
         batch_x, batch_y = data.train_batch(bs)
-        enc_outputs = self.ae.encode(Variable(batch_x.data, volatile=True)) #只训练discriminator，所以volatile
-        preds = self.lat_dis(Variable(enc_outputs[-1 - params.n_skip].data))
+        enc_output = self.ae.encode(Variable(batch_x.data, volatile=True)) #只训练discriminator，所以volatile
+        preds = self.lat_dis(Variable(enc_output.data))
         # loss / optimize
         loss = get_attr_loss(preds, batch_y, False, params) #训练lat_dis的预测结果接近batch_y
         self.stats['lat_dis_costs'].append(loss.data[0])
@@ -116,9 +116,9 @@ class Trainer(object):
         # batch / encode / discriminate
         batch_x, batch_y = data.train_batch(bs)
         flipped = flip_attributes(batch_y, params, 'all')
-        _, dec_outputs = self.ae(Variable(batch_x.data, volatile=True), flipped)
+        _, dec_output = self.ae(Variable(batch_x.data, volatile=True), flipped)
         real_preds = self.ptc_dis(batch_x)
-        fake_preds = self.ptc_dis(Variable(dec_outputs[-1].data))
+        fake_preds = self.ptc_dis(Variable(dec_output.data))
         y_fake = Variable(torch.FloatTensor(real_preds.size())
                                .fill_(params.smooth_label).cuda())
         # loss / optimize
@@ -168,29 +168,29 @@ class Trainer(object):
         bs = params.batch_size
         # batch / encode / decode
         batch_x, batch_y = data.train_batch(bs)
-        enc_outputs, dec_outputs = self.ae(batch_x, batch_y)
+        enc_output, dec_output = self.ae(batch_x, batch_y)
         # autoencoder loss from reconstruction #重建误差
-        loss = params.lambda_ae * ((batch_x - dec_outputs[-1]) ** 2).mean()
+        loss = params.lambda_ae * ((batch_x - dec_output) ** 2).mean()
         self.stats['rec_costs'].append(loss.data[0])
         # encoder loss from the latent discriminator #大概是本文的终极奥义的地方
         if params.lambda_lat_dis:
-            lat_dis_preds = self.lat_dis(enc_outputs[-1 - params.n_skip])
+            lat_dis_preds = self.lat_dis(enc_output)
             lat_dis_loss = get_attr_loss(lat_dis_preds, batch_y, True, params) #让编码器去掉属性
             loss = loss + get_lambda(params.lambda_lat_dis, params) * lat_dis_loss
         # decoding with random labels #这里是生成随机的y
         if params.lambda_ptc_dis + params.lambda_clf_dis > 0:
             flipped = flip_attributes(batch_y, params, 'all')
-            dec_outputs_flipped = self.ae.decode(enc_outputs, flipped)
+            dec_output_flipped = self.ae.decode(enc_output, flipped)
         # autoencoder loss from the patch discriminator # 根ptc_dis_step中产生对抗训练
         if params.lambda_ptc_dis:
-            ptc_dis_preds = self.ptc_dis(dec_outputs_flipped[-1])
+            ptc_dis_preds = self.ptc_dis(dec_output_flipped[-1])
             y_fake = Variable(torch.FloatTensor(ptc_dis_preds.size())
                                    .fill_(params.smooth_label).cuda())
             ptc_dis_loss = F.binary_cross_entropy(ptc_dis_preds, 1 - y_fake) # 让编码器和解码器产生的新数据更加真实
             loss = loss + get_lambda(params.lambda_ptc_dis, params) * ptc_dis_loss
         # autoencoder loss from the classifier discriminator
         if params.lambda_clf_dis:
-            clf_dis_preds = self.clf_dis(dec_outputs_flipped[-1])
+            clf_dis_preds = self.clf_dis(dec_output_flipped[-1])
             clf_dis_loss = get_attr_loss(clf_dis_preds, flipped, False, params) #让编码器和解码器产生的新数据在分类上和y相近
             loss = loss + get_lambda(params.lambda_clf_dis, params) * clf_dis_loss
         # check NaN
