@@ -38,6 +38,7 @@ def one_hot(label, num_dim, axis = -1): #by yanshuai
     label_expend = label.expand(label_size)
     zero_label_expend = torch.zeros_like(label_expend)
     one_hot = zero_label_expend.scatter_(len_dim + axis, label, 1)
+    one_hot = one_hot.type(torch.FloatTensor)
     return one_hot
 
 def initialize_exp(params):

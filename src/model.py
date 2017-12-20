@@ -286,7 +286,7 @@ def flip_attributes(attributes, params, attribute_id, new_value=None):
         assert new_value is None
         BS = attributes.size(0)
         n_attr = attributes.size(1)
-        y = get_rand_attributes(BS, n_attr)
+        y = get_rand_attributes(BS, int(n_attr/2))
         y = y.view(BS, -1)
         return Variable(y.cuda())
     else:
