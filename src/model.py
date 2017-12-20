@@ -284,8 +284,11 @@ def flip_attributes(attributes, params, attribute_id, new_value=None):
 
     if attribute_id == 'all':
         assert new_value is None
-        for attribute_id in range(len(params.attr)):
-            flip_attribute(attribute_id)
+        BS = attributes.size(0)
+        n_attr = attributes.size(1)
+        y = get_rand_attributes(BS, n_attr)
+        y = y.view(BS, -1)
+        return Variable(y.cuda())
     else:
         assert type(new_value) is int
         flip_attribute(attribute_id, new_value)
