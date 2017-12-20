@@ -29,6 +29,17 @@ MODELS_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'models')
 logger = getLogger()
 
 
+def one_hot(label, num_dim, axis = -1): #by yanshuai
+    label = torch.LongTensor(label)
+    label = label.unsqueeze(axis) #[BS]->[BS,1] #[BS,y]->[BS,y,1]
+    label_size = list(label.size())
+    len_dim = len(label_size)
+    label_size[axis] = num_dim
+    label_expend = label.expand(label_size)
+    zero_label_expend = torch.zeros_like(label_expend)
+    one_hot = zero_label_expend.scatter_(len_dim + axis, label, 1)
+    return one_hot
+
 def initialize_exp(params):
     """
     Experiment initialization.

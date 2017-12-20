@@ -9,7 +9,8 @@ import numpy as np
 import torch
 from torch import nn
 from torch.autograd import Variable
-from torch.nn import functional as F
+
+from .utils import one_hot
 
 
 class AutoEncoder(nn.Module):
@@ -246,8 +247,6 @@ class Classifier(nn.Module):
         return x
 
 
-
-
 def get_mappings(params):
     """
     Create a mapping between attributes and their associated IDs.
@@ -292,3 +291,9 @@ def flip_attributes(attributes, params, attribute_id, new_value=None):
         flip_attribute(attribute_id, new_value)
 
     return Variable(attributes.cuda())
+
+
+def get_rand_attributes(BS, y_dim):
+    y = torch.LongTensor(BS, y_dim).random_(2) #生成一个[BS, y_dim]的随机矩阵，随机值0，1
+    y = one_hot(y, 2)
+    return y
