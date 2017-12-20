@@ -9,11 +9,25 @@ import json
 import numpy as np
 from logging import getLogger
 
-from .model import update_predictions, flip_attributes
+from .model import flip_attributes
 from .utils import print_accuracies
 
 
 logger = getLogger()
+
+
+def update_predictions(all_preds, preds, targets, params):
+    """
+    Update discriminator / classifier predictions.
+    """
+    assert len(all_preds) == len(params.attr)
+    k = 0
+    for j, (_, n_cat) in enumerate(params.attr):
+        _preds = preds[:, k:k + n_cat].max(1)[1]
+        _targets = targets[:, k:k + n_cat].max(1)[1]
+        all_preds[j].extend((_preds == _targets).tolist())
+        k += n_cat
+    assert k == params.n_attr
 
 
 class Evaluator(object):

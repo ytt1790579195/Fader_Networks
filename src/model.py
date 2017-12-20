@@ -14,9 +14,9 @@ from torch.nn import functional as F
 
 class AutoEncoder(nn.Module):
 
-    def __init__(self, y_dim): #这里的y是[0,1]或是[1,0]标签的维数 2倍原来
-
+    def __init__(self, y_dim): #这里的y是[0,1]或是[1,0]标签的维数 2倍原
         super(AutoEncoder, self).__init__()
+        self.y_dim = y_dim
 
         self.conv1 = nn.Sequential( #[BS,256,256,3]->[BS,128,128,32]
             nn.Conv2d(3, 32, 4, stride=2, padding=1),
@@ -246,45 +246,13 @@ class Classifier(nn.Module):
         return x
 
 
-def get_attr_loss(output, attributes, flip, params):
-    """
-    Compute attributes loss.
-    """
-    assert type(flip) is bool
-    k = 0
-    loss = 0
-    for (_, n_cat) in params.attr:
-        # categorical
-        x = output[:, k:k + n_cat].contiguous()
-        y = attributes[:, k:k + n_cat].max(1)[1].view(-1)
-        if flip:
-            # generate different categories
-            shift = torch.LongTensor(y.size()).random_(n_cat - 1) + 1
-            y = (y + Variable(shift.cuda())) % n_cat
-        loss += F.cross_entropy(x, y)
-        k += n_cat
-    return loss
-
-
-def update_predictions(all_preds, preds, targets, params):
-    """
-    Update discriminator / classifier predictions.
-    """
-    assert len(all_preds) == len(params.attr)
-    k = 0
-    for j, (_, n_cat) in enumerate(params.attr):
-        _preds = preds[:, k:k + n_cat].max(1)[1]
-        _targets = targets[:, k:k + n_cat].max(1)[1]
-        all_preds[j].extend((_preds == _targets).tolist())
-        k += n_cat
-    assert k == params.n_attr
 
 
 def get_mappings(params):
     """
     Create a mapping between attributes and their associated IDs.
     """
-    if not hasattr(params, 'mappings'):
+    if not hasattr(params, 'mappings'): # 得到一个元组构成的列表，每个元组表示一组属性，这个元组只有两个数
         mappings = []
         k = 0
         for (_, n_cat) in params.attr:
@@ -306,7 +274,7 @@ def flip_attributes(attributes, params, attribute_id, new_value=None):
 
     def flip_attribute(attribute_id, new_value=None):
         BS = attributes.size(0)
-        i, j = mappings[attribute_id]
+        i, j = mappings[attribute_id] #取出一个元组，元组里的两个数字代表属性的起始位置
         attributes[:, i:j].zero_()
         if new_value is None:
             y = torch.LongTensor(BS).random_(j - i)
