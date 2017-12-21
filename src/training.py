@@ -46,6 +46,8 @@ class Trainer(object):
         """
         # data / parameters
         self.data = data
+        self.data_iter = iter(data)
+
         self.params = params
 
         # modules
@@ -105,17 +107,26 @@ class Trainer(object):
         """
         Train the latent discriminator.
         """
-        data = self.data
+        # 判断迭代器是否为空, 不空则取值
+        try:
+            batch_x, batch_y = next(self.data_iter)
+        except StopIteration:
+            self.data_iter = iter(self.data)
+            batch_x, batch_y = next(self.data_iter)
+
+        batch_x, batch_y = batch_x.cuda(), batch_y.cuda()
+
+
         params = self.params
         self.ae.eval()
         self.lat_dis.train()
-        bs = params.batch_size
+
         # batch / encode / discriminate
-        batch_x, batch_y = data.train_batch(bs)
-        enc_output = self.ae.encode(Variable(batch_x.data, volatile=True)) #只训练discriminator，所以volatile
+
+        enc_output = self.ae.encode(Variable(batch_x, volatile=True)) #只训练discriminator，所以volatile
         preds = self.lat_dis(Variable(enc_output.data))
         # loss / optimize
-        loss = get_attr_loss(preds, batch_y, False, params) #训练lat_dis的预测结果接近batch_y
+        loss = get_attr_loss(preds, Variable(batch_y), False, params) #训练lat_dis的预测结果接近batch_y
         self.stats['lat_dis_costs'].append(loss.data[0])
         self.lat_dis_optimizer.zero_grad()
         loss.backward()
@@ -127,17 +138,24 @@ class Trainer(object):
         """
         Train the patch discriminator.# 根autoencoder loss from the patch discriminator中产生对抗训练
         """
-        data = self.data
+        # 判断迭代器是否为空, 不空则取值
+        try:
+            batch_x, batch_y = next(self.data_iter)
+        except StopIteration:
+            self.data_iter = iter(self.data)
+            batch_x, batch_y = next(self.data_iter)
+
+        batch_x, batch_y = batch_x.cuda(), batch_y.cuda()
+
         params = self.params
         self.ae.eval()
         self.ptc_dis.train()
         bs = params.batch_size
         # batch / encode / discriminate
-        batch_x, batch_y = data.train_batch(bs)
         flipped = get_rand_attributes(bs, int(params.n_attr/2))
         flipped = flipped.view(bs, -1)
-        _, dec_output = self.ae(Variable(batch_x.data, volatile=True), flipped)
-        real_preds = self.ptc_dis(batch_x)
+        _, dec_output = self.ae(Variable(batch_x, volatile=True), flipped)
+        real_preds = self.ptc_dis(Variable(batch_x))
         fake_preds = self.ptc_dis(Variable(dec_output.data))
         y_fake = Variable(torch.FloatTensor(real_preds.size())
                                .fill_(params.smooth_label).cuda())
@@ -155,15 +173,21 @@ class Trainer(object):
         """
         Train the classifier discriminator. #就是个多分类器的训练过程
         """
-        data = self.data
+        # 判断迭代器是否为空, 不空则取值
+        try:
+            batch_x, batch_y = next(self.data_iter)
+        except StopIteration:
+            self.data_iter = iter(self.data)
+            batch_x, batch_y = next(self.data_iter)
+        batch_x, batch_y = batch_x.cuda(), batch_y.cuda()
+
         params = self.params
         self.clf_dis.train()
-        bs = params.batch_size
         # batch / predict
-        batch_x, batch_y = data.train_batch(bs)
-        preds = self.clf_dis(batch_x)
+
+        preds = self.clf_dis(Variable(batch_x))
         # loss / optimize
-        loss = get_attr_loss(preds, batch_y, False, params)
+        loss = get_attr_loss(preds, Variable(batch_y), False, params)
         self.stats['clf_dis_costs'].append(loss.data[0])
         self.clf_dis_optimizer.zero_grad()
         loss.backward()
@@ -176,7 +200,14 @@ class Trainer(object):
         Train the autoencoder with cross-entropy loss.
         Train the encoder with discriminator loss.
         """
-        data = self.data
+        # 判断迭代器是否为空, 不空则取值
+        try:
+            batch_x, batch_y = next(self.data_iter)
+        except StopIteration:
+            self.data_iter = iter(self.data)
+            batch_x, batch_y = next(self.data_iter)
+        batch_x, batch_y = batch_x.cuda(), batch_y.cuda()
+
         params = self.params
         self.ae.train()
         if params.n_lat_dis:
@@ -187,15 +218,15 @@ class Trainer(object):
             self.clf_dis.eval()
         bs = params.batch_size
         # batch / encode / decode
-        batch_x, batch_y = data.train_batch(bs)
-        enc_output, dec_output = self.ae(batch_x, batch_y)
+
+        enc_output, dec_output = self.ae(Variable(batch_x), Variable(batch_y))
         # autoencoder loss from reconstruction #重建误差
-        loss = params.lambda_ae * ((batch_x - dec_output) ** 2).mean()
+        loss = params.lambda_ae * ((Variable(batch_x) - dec_output) ** 2).mean()
         self.stats['rec_costs'].append(loss.data[0])
         # encoder loss from the latent discriminator #大概是本文的终极奥义的地方
         if params.lambda_lat_dis:
             lat_dis_preds = self.lat_dis(enc_output)
-            lat_dis_loss = get_attr_loss(lat_dis_preds, batch_y, True, params) #让编码器去掉属性
+            lat_dis_loss = get_attr_loss(lat_dis_preds, Variable(batch_y), True, params) #让编码器去掉属性
             loss = loss + get_lambda(params.lambda_lat_dis, params) * lat_dis_loss
         # decoding with random labels #这里是生成随机的y
         if params.lambda_ptc_dis + params.lambda_clf_dis > 0:

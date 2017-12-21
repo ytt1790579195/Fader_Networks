@@ -10,7 +10,7 @@ import numpy as np
 from logging import getLogger
 
 from .utils import print_accuracies, get_rand_attributes, change_ith_attribute_to_j
-
+from torch.autograd import Variable
 
 logger = getLogger()
 
@@ -58,10 +58,13 @@ class Evaluator(object):
         bs = params.batch_size
 
         costs = []
-        for i in range(0, len(data), bs):
-            batch_x, batch_y = data.eval_batch(i, i + bs)
-            _, dec_output = self.ae(batch_x, batch_y)
-            costs.append(((dec_output - batch_x) ** 2).mean().data[0])
+        for i, batch in enumerate(self.data, 0):
+            try:
+                batch_x, batch_y = Variable(batch[0].cuda(), volatile=True), Variable(batch[1].cuda(), volatile=True)
+                _, dec_output = self.ae(batch_x, batch_y)
+                costs.append(((dec_output - batch_x) ** 2).mean().data[0])
+            except:
+                pass
 
         return np.mean(costs)
 
@@ -76,11 +79,14 @@ class Evaluator(object):
         bs = params.batch_size
 
         all_preds = [[] for _ in range(len(params.attr))]
-        for i in range(0, len(data), bs):
-            batch_x, batch_y = data.eval_batch(i, i + bs)
-            enc_output = self.ae.encode(batch_x)
-            preds = self.lat_dis(enc_output).data.cpu()
-            update_predictions(all_preds, preds, batch_y.data.cpu(), params)
+        for i, batch in enumerate(self.data, 0):
+            try:
+                batch_x, batch_y = Variable(batch[0].cuda(), volatile=True), Variable(batch[1].cuda(), volatile=True)
+                enc_output = self.ae.encode(batch_x)
+                preds = self.lat_dis(enc_output).data.cpu()
+                update_predictions(all_preds, preds, batch_y.data.cpu(), params)
+            except:
+                pass
 
         return [np.mean(x) for x in all_preds]
 
@@ -97,15 +103,17 @@ class Evaluator(object):
         real_preds = []
         fake_preds = []
 
-        for i in range(0, len(data), bs):
-            # batch / encode / decode
-            batch_x, batch_y = data.eval_batch(i, i + bs)
-            flipped = get_rand_attributes(bs, int(params.n_attr / 2))
-            flipped = flipped.view(bs, -1)
-            _, dec_output = self.ae(batch_x, flipped)
-            # predictions
-            real_preds.extend(self.ptc_dis(batch_x).data.tolist())
-            fake_preds.extend(self.ptc_dis(dec_output).data.tolist())
+        for i, batch in enumerate(self.data, 0):
+            try:
+                batch_x, batch_y = Variable(batch[0].cuda(), volatile=True), Variable(batch[1].cuda(), volatile=True)
+                flipped = get_rand_attributes(bs, int(params.n_attr / 2))
+                flipped = flipped.view(bs, -1)
+                _, dec_output = self.ae(batch_x, flipped)
+                # predictions
+                real_preds.extend(self.ptc_dis(batch_x).data.tolist())
+                fake_preds.extend(self.ptc_dis(dec_output).data.tolist())
+            except:
+                pass
 
         return real_preds, fake_preds
 
@@ -120,22 +128,24 @@ class Evaluator(object):
         bs = params.batch_size
 
         all_preds = [[] for _ in range(params.n_attr)]
-        for i in range(0, len(data), bs):
-            # batch / encode / decode
-            batch_x, batch_y = data.eval_batch(i, i + bs)
-            enc_output = self.ae.encode(batch_x)
-            # flip all attributes one by one
-            k = 0
-            for i, (_, n_cat) in enumerate(params.attr):
-                for value in range(n_cat):
-                    flipped = change_ith_attribute_to_j(batch_y, i , value)
-                    flipped = flipped.view(bs, -1)
-                    dec_output = self.ae.decode(enc_output, flipped)
-                    # classify
-                    clf_dis_preds = self.clf_dis(dec_output)[:, i:i + n_cat].max(1)[1].view(-1)
-                    all_preds[k].extend((clf_dis_preds.data.cpu() == value).tolist())
-                    k += 1
-            assert k == params.n_attr
+        for i, batch in enumerate(self.data, 0):
+            try:
+                batch_x, batch_y = Variable(batch[0].cuda(), volatile=True), Variable(batch[1].cuda(), volatile=True)
+                enc_output = self.ae.encode(batch_x)
+                # flip all attributes one by one
+                k = 0
+                for i, (_, n_cat) in enumerate(params.attr):
+                    for value in range(n_cat):
+                        flipped = change_ith_attribute_to_j(batch_y, i , value)
+                        flipped = flipped.view(bs, -1)
+                        dec_output = self.ae.decode(enc_output, flipped)
+                        # classify
+                        clf_dis_preds = self.clf_dis(dec_output)[:, i:i + n_cat].max(1)[1].view(-1)
+                        all_preds[k].extend((clf_dis_preds.data.cpu() == value).tolist())
+                        k += 1
+                assert k == params.n_attr
+            except:
+                pass
 
         return [np.mean(x) for x in all_preds]
 
@@ -154,22 +164,24 @@ class Evaluator(object):
             idx.append(sum([x[1] for x in self.eval_clf.attr[:attr_index]]))
 
         all_preds = [[] for _ in range(params.n_attr)]
-        for i in range(0, len(data), bs):
-            # batch / encode / decode
-            batch_x, batch_y = data.eval_batch(i, i + bs)
-            enc_output = self.ae.encode(batch_x)
-            # flip all attributes one by one
-            k = 0
-            for i, (_, n_cat) in enumerate(params.attr):
-                for value in range(n_cat):
-                    flipped = change_ith_attribute_to_j(batch_y, i , value)
-                    flipped = flipped.view(bs, -1)
-                    dec_output = self.ae.decode(enc_output, flipped)
-                    # classify
-                    clf_preds = self.eval_clf(dec_output)[:, idx[i]:idx[i] + n_cat].max(1)[1].view(-1)
-                    all_preds[k].extend((clf_preds.data.cpu() == value).tolist())
-                    k += 1
-            assert k == params.n_attr
+        for i, batch in enumerate(self.data, 0):
+            try:
+                batch_x, batch_y = Variable(batch[0].cuda(), volatile=True), Variable(batch[1].cuda(), volatile=True)
+                enc_output = self.ae.encode(batch_x)
+                # flip all attributes one by one
+                k = 0
+                for i, (_, n_cat) in enumerate(params.attr):
+                    for value in range(n_cat):
+                        flipped = change_ith_attribute_to_j(batch_y, i , value)
+                        flipped = flipped.view(bs, -1)
+                        dec_output = self.ae.decode(enc_output, flipped)
+                        # classify
+                        clf_preds = self.eval_clf(dec_output)[:, idx[i]:idx[i] + n_cat].max(1)[1].view(-1)
+                        all_preds[k].extend((clf_preds.data.cpu() == value).tolist())
+                        k += 1
+                assert k == params.n_attr
+            except:
+                pass
 
         return [np.mean(x) for x in all_preds]
 
