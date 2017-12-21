@@ -245,34 +245,3 @@ class Classifier(nn.Module):
         x = self.fc1(x)
         x = self.fc2(x)
         return x
-
-
-def flip_attributes(attributes, params, attribute_id, new_value=None):
-    """
-    Randomly flip a set of attributes.
-    """
-    assert attributes.size(1) == params.n_attr
-    attributes = attributes.data.clone().cpu()
-
-    if attribute_id == 'all':
-        assert new_value is None
-        BS = attributes.size(0)
-        n_attr = attributes.size(1)
-        y = get_rand_attributes(BS, int(n_attr/2))
-        y = y.view(BS, -1)
-        return Variable(y.cuda())
-    else:
-        change_ith_attribute_to_j()
-    return Variable(attributes.cuda())
-
-
-def get_rand_attributes(BS, y_dim):
-    y = torch.LongTensor(BS, y_dim).random_(2) #生成一个[BS, y_dim]的随机矩阵，随机值0，1
-    y = one_hot(y, 2)
-    return Variable(y.cuda())
-
-def change_ith_attribute_to_j(attributes, i, j): #j代表位置
-    attributes = attributes.data.clone().cpu()
-    attributes[i] = j
-    y = one_hot(attributes, 2)
-    return Variable(y.cuda())

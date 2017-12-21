@@ -35,12 +35,12 @@ def get_rand_attributes(BS, y_dim):
     y = one_hot(y, 2)
     return Variable(y.cuda())
 
+
 def change_ith_attribute_to_j(attributes, i, j): #j代表位置
     attributes = attributes.data.clone().cpu()
     attributes[i] = j
     y = one_hot(attributes, 2)
     return Variable(y.cuda())
-
 
 
 def one_hot(label, depth, axis = -1): #by yanshuai
