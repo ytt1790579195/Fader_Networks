@@ -12,8 +12,7 @@ from torch.autograd import Variable
 from torch.nn import functional as F
 from logging import getLogger
 
-from .utils import get_optimizer, clip_grad_norm, get_lambda, reload_model
-from .model import flip_attributes
+from .utils import get_optimizer, clip_grad_norm, get_lambda, reload_model, get_rand_attributes
 
 
 def get_attr_loss(output, attributes, flip, params):
@@ -135,7 +134,8 @@ class Trainer(object):
         bs = params.batch_size
         # batch / encode / discriminate
         batch_x, batch_y = data.train_batch(bs)
-        flipped = flip_attributes(batch_y, params, 'all')
+        flipped = get_rand_attributes(bs, int(params.n_attr/2))
+        flipped = flipped.view(bs, -1)
         _, dec_output = self.ae(Variable(batch_x.data, volatile=True), flipped)
         real_preds = self.ptc_dis(batch_x)
         fake_preds = self.ptc_dis(Variable(dec_output.data))
@@ -199,7 +199,8 @@ class Trainer(object):
             loss = loss + get_lambda(params.lambda_lat_dis, params) * lat_dis_loss
         # decoding with random labels #这里是生成随机的y
         if params.lambda_ptc_dis + params.lambda_clf_dis > 0:
-            flipped = flip_attributes(batch_y, params, 'all')
+            flipped = get_rand_attributes(bs, int(params.n_attr/2))
+            flipped = flipped.view(bs, -1)
             dec_output_flipped = self.ae.decode(enc_output, flipped)
         # autoencoder loss from the patch discriminator # 根ptc_dis_step中产生对抗训练
         if params.lambda_ptc_dis:

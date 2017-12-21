@@ -9,8 +9,7 @@ import json
 import numpy as np
 from logging import getLogger
 
-from .model import flip_attributes
-from .utils import print_accuracies
+from .utils import print_accuracies, get_rand_attributes, change_ith_attribute_to_j
 
 
 logger = getLogger()
@@ -101,7 +100,8 @@ class Evaluator(object):
         for i in range(0, len(data), bs):
             # batch / encode / decode
             batch_x, batch_y = data.eval_batch(i, i + bs)
-            flipped = flip_attributes(batch_y, params, 'all')
+            flipped = get_rand_attributes(bs, int(params.n_attr / 2))
+            flipped = flipped.view(bs, -1)
             _, dec_output = self.ae(batch_x, flipped)
             # predictions
             real_preds.extend(self.ptc_dis(batch_x).data.tolist())
@@ -126,12 +126,13 @@ class Evaluator(object):
             enc_output = self.ae.encode(batch_x)
             # flip all attributes one by one
             k = 0
-            for j, (_, n_cat) in enumerate(params.attr):
+            for i, (_, n_cat) in enumerate(params.attr):
                 for value in range(n_cat):
-                    flipped = flip_attributes(batch_y, params, j, new_value=value)
+                    flipped = change_ith_attribute_to_j(batch_y, i , value)
+                    flipped = flipped.view(bs, -1)
                     dec_output = self.ae.decode(enc_output, flipped)
                     # classify
-                    clf_dis_preds = self.clf_dis(dec_output)[:, j:j + n_cat].max(1)[1].view(-1)
+                    clf_dis_preds = self.clf_dis(dec_output)[:, i:i + n_cat].max(1)[1].view(-1)
                     all_preds[k].extend((clf_dis_preds.data.cpu() == value).tolist())
                     k += 1
             assert k == params.n_attr
@@ -159,12 +160,13 @@ class Evaluator(object):
             enc_output = self.ae.encode(batch_x)
             # flip all attributes one by one
             k = 0
-            for j, (_, n_cat) in enumerate(params.attr):
+            for i, (_, n_cat) in enumerate(params.attr):
                 for value in range(n_cat):
-                    flipped = flip_attributes(batch_y, params, j, new_value=value)
+                    flipped = change_ith_attribute_to_j(batch_y, i , value)
+                    flipped = flipped.view(bs, -1)
                     dec_output = self.ae.decode(enc_output, flipped)
                     # classify
-                    clf_preds = self.eval_clf(dec_output)[:, idx[j]:idx[j] + n_cat].max(1)[1].view(-1)
+                    clf_preds = self.eval_clf(dec_output)[:, idx[i]:idx[i] + n_cat].max(1)[1].view(-1)
                     all_preds[k].extend((clf_preds.data.cpu() == value).tolist())
                     k += 1
             assert k == params.n_attr

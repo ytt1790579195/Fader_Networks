@@ -14,6 +14,7 @@ import argparse
 import subprocess
 import torch
 from torch import optim
+from torch.autograd import Variable
 from logging import getLogger
 
 from .logger import create_logger
@@ -29,12 +30,25 @@ MODELS_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'models')
 logger = getLogger()
 
 
-def one_hot(label, num_dim, axis = -1): #by yanshuai
+def get_rand_attributes(BS, y_dim):
+    y = torch.LongTensor(BS, y_dim).random_(2) #生成一个[BS, y_dim]的随机矩阵，随机值0，1
+    y = one_hot(y, 2)
+    return Variable(y.cuda())
+
+def change_ith_attribute_to_j(attributes, i, j): #j代表位置
+    attributes = attributes.data.clone().cpu()
+    attributes[i] = j
+    y = one_hot(attributes, 2)
+    return Variable(y.cuda())
+
+
+
+def one_hot(label, depth, axis = -1): #by yanshuai
     label = torch.LongTensor(label)
     label = label.unsqueeze(axis) #[BS]->[BS,1] #[BS,y]->[BS,y,1]
     label_size = list(label.size())
     len_dim = len(label_size)
-    label_size[axis] = num_dim
+    label_size[axis] = depth
     label_expend = label.expand(label_size)
     zero_label_expend = torch.zeros_like(label_expend)
     one_hot = zero_label_expend.scatter_(len_dim + axis, label, 1)

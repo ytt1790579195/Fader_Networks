@@ -247,40 +247,12 @@ class Classifier(nn.Module):
         return x
 
 
-def get_mappings(params):
-    """
-    Create a mapping between attributes and their associated IDs.
-    """
-    if not hasattr(params, 'mappings'): # 得到一个元组构成的列表，每个元组表示一组属性，这个元组只有两个数
-        mappings = []
-        k = 0
-        for (_, n_cat) in params.attr:
-            assert n_cat >= 2
-            mappings.append((k, k + n_cat))
-            k += n_cat
-        assert k == params.n_attr
-        params.mappings = mappings
-    return params.mappings
-
-
 def flip_attributes(attributes, params, attribute_id, new_value=None):
     """
     Randomly flip a set of attributes.
     """
     assert attributes.size(1) == params.n_attr
-    mappings = get_mappings(params)
     attributes = attributes.data.clone().cpu()
-
-    def flip_attribute(attribute_id, new_value=None):
-        BS = attributes.size(0)
-        i, j = mappings[attribute_id] #取出一个元组，元组里的两个数字代表属性的起始位置
-        attributes[:, i:j].zero_()
-        if new_value is None:
-            y = torch.LongTensor(BS).random_(j - i)
-        else:
-            assert new_value in range(j - i)
-            y = torch.LongTensor(BS).fill_(new_value)
-        attributes[:, i:j].scatter_(1, y.unsqueeze(1), 1)
 
     if attribute_id == 'all':
         assert new_value is None
@@ -290,13 +262,17 @@ def flip_attributes(attributes, params, attribute_id, new_value=None):
         y = y.view(BS, -1)
         return Variable(y.cuda())
     else:
-        assert type(new_value) is int
-        flip_attribute(attribute_id, new_value)
-
+        change_ith_attribute_to_j()
     return Variable(attributes.cuda())
 
 
 def get_rand_attributes(BS, y_dim):
     y = torch.LongTensor(BS, y_dim).random_(2) #生成一个[BS, y_dim]的随机矩阵，随机值0，1
     y = one_hot(y, 2)
-    return y
+    return Variable(y.cuda())
+
+def change_ith_attribute_to_j(attributes, i, j): #j代表位置
+    attributes = attributes.data.clone().cpu()
+    attributes[i] = j
+    y = one_hot(attributes, 2)
+    return Variable(y.cuda())
