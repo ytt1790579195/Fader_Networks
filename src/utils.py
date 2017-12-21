@@ -38,8 +38,7 @@ def softmax_cross_entropy(pred, label,axis = -1):
     bs = label.size()[0]
     label_ = label.view(bs, -1)
     pred_ = F.log_softmax(pred, axis).view(bs, -1)
-
-    loss = -torch.dot(label_, pred_)/bs
+    loss = -torch.dot(label_, pred_) / bs
 
     return loss
 
@@ -124,7 +123,7 @@ def check_attr(params):
         params.attr = attr_flag(','.join(AVAILABLE_ATTR))
     else:
         assert all(name in AVAILABLE_ATTR and n_cat >= 2 for name, n_cat in params.attr)
-    params.n_attr = sum([n_cat for _, n_cat in params.attr])
+    params.n_attr = sum([1 for _, n_cat in params.attr])
 
 
 def get_optimizer(model, s):

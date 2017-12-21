@@ -131,7 +131,7 @@ class Trainer(object):
         self.ptc_dis.train()
         bs = params.batch_size
         # batch / encode / discriminate
-        flipped = get_rand_attributes(bs, int(params.n_attr/2))
+        flipped = get_rand_attributes(bs, int(params.n_attr))
         _, dec_output = self.ae(Variable(batch_x, volatile=True), flipped)
         real_preds = self.ptc_dis(Variable(batch_x))
         fake_preds = self.ptc_dis(Variable(dec_output.data))
@@ -209,7 +209,7 @@ class Trainer(object):
             loss = loss + get_lambda(params.lambda_lat_dis, params) * lat_dis_loss
         # decoding with random labels #这里是生成随机的y
         if params.lambda_ptc_dis + params.lambda_clf_dis > 0:
-            flipped = get_rand_attributes(bs, int(params.n_attr/2))
+            flipped = get_rand_attributes(bs, int(params.n_attr))
             dec_output_flipped = self.ae.decode(enc_output, flipped)
         # autoencoder loss from the patch discriminator # 根ptc_dis_step中产生对抗训练
         if params.lambda_ptc_dis:
