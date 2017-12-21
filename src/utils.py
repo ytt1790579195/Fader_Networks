@@ -55,6 +55,7 @@ def one_hot(label, depth, axis = -1): #by yanshuai
     one_hot = one_hot.type(torch.FloatTensor)
     return one_hot
 
+
 def initialize_exp(params):
     """
     Experiment initialization.

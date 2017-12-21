@@ -90,6 +90,7 @@ class AutoEncoder(nn.Module):
 
     def decode(self, z, y):
         BS = z.size(0)
+        y = y.view(BS, -1)
         y = y.unsqueeze(2).unsqueeze(3)
         x = torch.cat([z, y.expand(BS, self.y_dim, 4, 4)], 1)
         x = self.deconv1(x)
