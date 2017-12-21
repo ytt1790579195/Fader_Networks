@@ -9,12 +9,14 @@ import os
 import argparse
 import torch
 
-from src.loader import load_images, DataSampler
+
 from src.utils import initialize_exp, bool_flag, attr_flag, check_attr
 from src.model import AutoEncoder, LatentDiscriminator, PatchDiscriminator, Classifier
 from src.training import Trainer
 from src.evaluation import Evaluator
 
+from src.dataset import Dataset
+from torch.utils.data import DataLoader
 
 # parse parameters
 parser = argparse.ArgumentParser(description='Images autoencoder')
@@ -107,11 +109,11 @@ assert params.lambda_lat_dis == 0 or params.n_lat_dis > 0
 assert params.lambda_ptc_dis == 0 or params.n_ptc_dis > 0
 assert params.lambda_clf_dis == 0 or params.n_clf_dis > 0
 
-# initialize experiment / load dataset
-logger = initialize_exp(params)
-data, attributes = load_images(params)
-train_data = DataSampler(data[0], attributes[0], params)
-valid_data = DataSampler(data[1], attributes[1], params)
+# load Dataset
+train_dataset = Dataset(params,'train')
+val_dataset = Dataset(params, 'val')
+train_data = DataLoader(train_dataset, batch_size=params.batch_size, shuffle=True, num_workers=1) # num_workers 几个线程参与读数据
+valid_data = DataLoader(val_dataset, batch_size=params.batch_size, shuffle=False, num_workers=1)
 
 # build the model
 ae = AutoEncoder(params.n_attr).cuda()
