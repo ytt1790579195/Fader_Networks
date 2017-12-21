@@ -90,6 +90,7 @@ class AutoEncoder(nn.Module):
 
     def decode(self, z, y):
         BS = z.size(0)
+        y = y.view(BS, -1)
         y = y.unsqueeze(2).unsqueeze(3)
         x = torch.cat([z, y.expand(BS, self.y_dim, 4, 4)], 1)
         x = self.deconv1(x)
@@ -114,6 +115,7 @@ class AutoEncoder(nn.Module):
 class LatentDiscriminator(nn.Module):
 
     def __init__(self, y_dim):
+        self.y_dim = y_dim
         super(LatentDiscriminator, self).__init__()
         self.conv1 = nn.Sequential( #[BS,512,4,4]–>[BS,512,2,2]
             nn.Conv2d(512, 512, 4, stride=2, padding=1),
@@ -140,7 +142,7 @@ class LatentDiscriminator(nn.Module):
         x = self.conv2(x)
         x = x.view(-1, 512)
         x = self.fc1(x)
-        x = self.fc2(x)
+        x = self.fc2(x).view(-1, int(self.y_dim / 2), 2)
         return x
 
 
@@ -184,6 +186,7 @@ class PatchDiscriminator(nn.Module):
 class Classifier(nn.Module):
 
     def __init__(self, y_dim):
+        self.y_dim = y_dim
         super(Classifier, self).__init__()
         self.conv1 = nn.Sequential( #[BS,3,256,256]->[BS,32,128,128]
             nn.Conv2d(3, 32, 4, stride=2, padding=1),
@@ -243,5 +246,5 @@ class Classifier(nn.Module):
         x = self.conv8(x)
         x = x.view(-1, 512)
         x = self.fc1(x)
-        x = self.fc2(x)
+        x = self.fc2(x).view(-1, int(self.y_dim / 2), 2)
         return x
