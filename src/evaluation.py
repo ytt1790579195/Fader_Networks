@@ -107,7 +107,7 @@ class Evaluator(object):
         return np.mean(bs_accu, axis=0)  # size:[1,n_attr] 每个属性一个均值
 
     """ print accuracies. """
-    def print_accuracies(values):
+    def print_accuracies(self, values):
         for name, value in values:
             logger.info('{:<20}: {:>6}'.format(name, '%.3f%%' % (100 * value)))
         logger.info('')
