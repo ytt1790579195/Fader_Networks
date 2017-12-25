@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 
 class Dataset(data.Dataset):
-    def __init__(self, params, train_eval = 'train', one_hot = Tr):
+    def __init__(self, params, train_eval = 'train', one_hot = True):
         # 一条example 为 图像文件名和对应的属性
         # 读取样本的图像文件名和属性
 
@@ -22,7 +22,7 @@ class Dataset(data.Dataset):
             line_content = [cnt for cnt in line.split()]  #  例 [000001.jpg, 1, -1, 1, ...] size : 41
             one_img_filename = img_path + "/" + line_content[0]  # data/train/img/000001.jpg
             one_img_attrs = [] # 一副图像的所有属性，如Smiling和Male属性
-            for name, _ in params.attr:
+            for name in params.attr:
                 if one_hot:
                     if float(line_content[attr_all_names.index(name) + 1]) == 1.:
                         one_img_attrs.append([0,1])
@@ -44,10 +44,8 @@ class Dataset(data.Dataset):
 
         # data augmentation, flip
         if self.train:
-            if self.param.v_flip and np.random.rand() <= 0.5:
-                img = cv2.flip(img, 0)
-            if self.param.h_flip and np.random.rand() <= 0.5:
-                img = cv2.flip(img, 0)
+            if np.random.rand() <= 0.5:
+                img = cv2.flip(img, 1) #水平翻转
         img = torch.from_numpy(img)
 
         # normalization

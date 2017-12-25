@@ -5,13 +5,8 @@
 # LICENSE file in the root directory of this source tree.
 #
 
-import numpy as np
 import torch
 from torch import nn
-from torch.autograd import Variable
-
-from .utils import one_hot
-
 
 class AutoEncoder(nn.Module):
 
