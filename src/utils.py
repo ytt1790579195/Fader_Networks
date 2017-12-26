@@ -74,9 +74,8 @@ class LogFormatter():
 
 """ log initialization. """
 def initialize_log(params):
-
     # create the log path if it does not exist
-    log_path = os.path.join(MODELS_PATH, params.name)
+    log_path = os.path.join(MODELS_PATH, params.log_name)
     if not os.path.exists(log_path):
         os.mkdir(log_path)
 
@@ -103,7 +102,6 @@ def initialize_log(params):
     console_handler.setFormatter(log_formatter)
     logger.addHandler(console_handler)
 
-    # create a logger
     logger.info('============ Initialized logger ============')
     logger.info('\n'.join('%s: %s' % (k, str(v)) for k, v
                           in sorted(dict(vars(params)).items()))) # 打印params参数值

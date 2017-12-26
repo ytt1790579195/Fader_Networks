@@ -17,18 +17,16 @@ from torch.utils.data import DataLoader
 
 # parse parameters
 parser = argparse.ArgumentParser(description='Images autoencoder')
-parser.add_argument("--name", type=str, default="log",
+parser.add_argument("--log_name", type=str, default="log",
                     help="Experiment name")
 parser.add_argument("--attr", type=list, default=["Smiling","Male"],
                     help="Attributes to classify")
-
 parser.add_argument("--batch_size", type=int, default=32,
                     help="Batch size")
 parser.add_argument("--n_epochs", type=int, default=1000,
                     help="Total number of epochs")
 parser.add_argument("--epoch_size", type=int, default=32*25*5,
                     help="Number of samples per epoch")
-
 parser.add_argument("--ae_reload", type=str, default="",
                     help="Reload a pretrained encoder")
 parser.add_argument("--lat_dis_reload", type=str, default="",
