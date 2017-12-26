@@ -56,51 +56,14 @@ def one_hot(label, depth, axis = -1): #by yanshuai
     one_hot = one_hot.type(torch.FloatTensor)
     return one_hot
 
-class LogFormatter():
-    def __init__(self):
-        self.start_time = time.time()
 
-    def format(self, record):
-        elapsed_seconds = round(record.created - self.start_time)
-
-        prefix = "%s - %s - %s" % (
-            record.levelname,
-            time.strftime('%x %X'), # 12/22/17 17:53:01
-            timedelta(seconds=elapsed_seconds) # 两个日期或时间之差
-        )
-        message = record.getMessage()
-        message = message.replace('\n', '\n' + ' ' * (len(prefix) + 3))
-        return "%s - %s" % (prefix, message)
-
-""" log initialization. """
-def initialize_log(params):
-    # create the log path if it does not exist
-    log_path = os.path.join(MODELS_PATH, params.log_name)
-    if not os.path.exists(log_path):
-        os.mkdir(log_path)
-
-    """ Create a logger. """
-    log_formatter = LogFormatter()
-
-    # create logger and set level to debug
-    logger = logging.getLogger()
-    logger.handlers = []
-    logger.setLevel(logging.DEBUG)
-    logger.propagate = False
-
-    # create file handler and set level to debug # 输出到日志文件
-    if log_path is not None:
-        file_name = log_path + '/' + time.strftime('%Y_%m_%d_%X') #以日期作为log文件名
-        file_handler = logging.FileHandler(file_name, "a")  # "a" append mode
-        file_handler.setLevel(logging.DEBUG)
-        file_handler.setFormatter(log_formatter)
-        logger.addHandler(file_handler)
-
-    # create console handler and set level to info #输出到控制台
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(log_formatter)
-    logger.addHandler(console_handler)
+def initialize_exp(params):
+    """
+    Experiment initialization.
+    """
+    # dump parameters
+    params.dump_path = get_dump_path(params)
+    pickle.dump(params, open(os.path.join(params.dump_path, 'params.pkl'), 'wb'))
 
     logger.info('============ Initialized logger ============')
     logger.info('\n'.join('%s: %s' % (k, str(v)) for k, v
